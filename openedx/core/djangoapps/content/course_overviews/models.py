@@ -1,7 +1,6 @@
 """
 Declaration of CourseOverview model
 """
-
 import json
 
 from django.db.models.fields import BooleanField, DateTimeField, DecimalField, TextField, FloatField, IntegerField
@@ -15,7 +14,7 @@ from xmodule import course_metadata_utils
 from xmodule.course_module import CourseDescriptor
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
-from xmodule_django.models import CourseKeyField, UsageKeyField
+from xmodule_django.models import CourseKeyField, UsageKeyField, StringListField
 
 from ccx_keys.locator import CCXLocator
 
@@ -30,7 +29,7 @@ class CourseOverview(TimeStampedModel):
     """
 
     # IMPORTANT: Bump this whenever you modify this model and/or add a migration.
-    VERSION = 1
+    VERSION = 2
 
     # Cache entry versioning.
     version = IntegerField()
@@ -77,6 +76,8 @@ class CourseOverview(TimeStampedModel):
     invitation_only = BooleanField(default=False)
     max_student_enrollments_allowed = IntegerField(null=True)
 
+    tabs = StringListField()
+
     @classmethod
     def _create_from_course(cls, course):
         """
@@ -114,6 +115,10 @@ class CourseOverview(TimeStampedModel):
             start = ccx.start
             end = ccx.due
 
+        tabs = []
+        for tab in course.tabs:
+            tabs.append(tab.tab_id)
+
         return cls(
             version=cls.VERSION,
             id=course.id,
@@ -149,6 +154,8 @@ class CourseOverview(TimeStampedModel):
             enrollment_domain=course.enrollment_domain,
             invitation_only=course.invitation_only,
             max_student_enrollments_allowed=course.max_student_enrollments_allowed,
+
+            tabs=tabs,
         )
 
     @classmethod

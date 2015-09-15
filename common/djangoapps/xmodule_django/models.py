@@ -1,6 +1,7 @@
 """
 Useful django models for implementing XBlock infrastructure in django.
 """
+import ast
 
 import warnings
 
@@ -174,7 +175,30 @@ class BlockTypeKeyField(OpaqueKeyField):
     KEY_CLASS = BlockTypeKey
 
 
+class StringListField(models.TextField):
+    """
+    A django Field that stores a List as a string.
+    """
+    __meta__ = models.SubfieldBase
+    description = "Stores a python list in DB in the form of string"
+
+    def __init__(self, *args, **kwargs):
+        super(StringListField, self).__init__(*args, **kwargs)
+
+    def to_python(self, value):
+        if not value:
+            value = []
+        if isinstance(value, list):
+            return value
+        return ast.literal_eval(value)
+
+    def get_prep_value(self, value):
+        if value is None:
+            return value
+        return unicode(value)
+
 add_introspection_rules([], [r"^xmodule_django\.models\.CourseKeyField"])
 add_introspection_rules([], [r"^xmodule_django\.models\.LocationKeyField"])
 add_introspection_rules([], [r"^xmodule_django\.models\.UsageKeyField"])
 add_introspection_rules([], [r"^xmodule_django\.models\.BlockTypeKeyField"])
+add_introspection_rules([], [r"^xmodule_django\.models\.StringListField"])
