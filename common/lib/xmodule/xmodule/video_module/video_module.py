@@ -37,7 +37,7 @@ from xmodule.raw_module import EmptyDataRawDescriptor
 from xmodule.xml_module import is_pointer_tag, name_to_pathname, deserialize_field
 from xmodule.exceptions import NotFoundError
 
-from .transcripts_utils import VideoTranscriptsMixin
+from .transcripts_utils import VideoTranscriptsMixin, Transcript, get_html5_ids, subs_filename
 from .video_utils import create_youtube_string, get_video_from_cdn, get_poster
 from .bumper_utils import bumperize
 from .video_xfields import VideoFields
@@ -424,7 +424,16 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         This should be fixed too.
         """
         metadata_was_changed_by_user = old_metadata != own_metadata(self)
-        if metadata_was_changed_by_user:
+        html5_sub_exist = True # html5 sub exist
+        if self.sub and len(old_metadata['html5_sources']) > 0:
+            html5_ids = get_html5_ids(old_metadata['html5_sources'])
+            for subs_id in html5_ids:
+                try:
+                    sub = Transcript.asset(self.location, subs_id)
+                except NotFoundError:
+                    html5_sub_exist = False
+
+        if metadata_was_changed_by_user or not html5_sub_exist:
             manage_video_subtitles_save(
                 self,
                 user,
