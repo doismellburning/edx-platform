@@ -3,11 +3,14 @@ Test finding orphans via the view and django config
 """
 import json
 import ddt
-from contentstore.tests.utils import CourseTestCase
-from student.models import CourseEnrollment
+
+from contentstore.tests.utils import CourseTestCase, TEST_DATA_DIR
 from contentstore.utils import reverse_course_url
+from opaque_keys.edx.locator import BlockUsageLocator
+from student.models import CourseEnrollment
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.xml_importer import import_course_from_xml
 
 
 class TestOrphanBase(CourseTestCase):
@@ -128,3 +131,50 @@ class TestOrphan(TestOrphanBase):
         self.assertEqual(response.status_code, 403)
         response = test_user_client.delete(orphan_url)
         self.assertEqual(response.status_code, 403)
+
+    def test_orphan_parents(self):
+        store = self.store
+        with store.default_store(ModuleStoreEnum.Type.split):
+            courses = import_course_from_xml(
+                store,
+                self.user.id,
+                TEST_DATA_DIR,
+                source_dirs=['split_orphan'],
+                raise_on_failure=True,
+                create_if_not_present=True,
+            )
+            course = courses[0]
+
+            # Get chapter
+            chapter = self.store.get_item(BlockUsageLocator(course.id, 'chapter', 'chapter1'))
+            sequential1, sequential2 = self.store.get_items(course.id, qualifiers={'category': 'sequential'})
+            sequential1_location = unicode(sequential1.location)
+            sequential2_location = unicode(sequential2.location)
+            html = self.store.get_item(BlockUsageLocator(course.id, 'html', 'html1'))
+
+            # Chapter has two children Seq1, Seq2.
+            self.assertEqual(len(chapter.children), 2)
+            for child in chapter.children:
+                self.assertIn(unicode(child), [sequential1_location, sequential2_location])
+
+            # HTML component has `sequential1` as its parent. (only one parent is returned out of the two)
+            html_parent = store.get_parent_location(html.location)
+            self.assertEqual(unicode(html_parent), sequential1_location)
+
+            # Remove 'sequential1' from chapter's children (It will make other an orphan)
+            chapter.children = [sequential2.location]
+            store.update_item(chapter, self.user.id)
+
+            # Get orphans & verify 'sequential1' has become an orphan
+            orphans = store.get_orphans(course.id)
+            self.assertEqual(len(orphans), 1, "Orphans are not equal to 1")
+            self.assertEqual(unicode(orphans[0]), sequential1_location)
+
+            # Re-fetch the chapter & verify it only has one children
+            chapter = self.store.get_item(BlockUsageLocator(course.id, 'chapter', 'chapter1'))
+            self.assertEqual(len(chapter.children), 1)
+
+            # Verify 'get_parent_location' does not return an orphan as parent
+            html_parent = store.get_parent_location(html.location)
+            self.assertNotEqual(unicode(html_parent), sequential1_location)
+            self.assertEqual(unicode(html_parent), sequential2_location)
