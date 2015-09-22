@@ -21,15 +21,9 @@ class StudioLibraryAxsTest(StudioLibraryTest):
         lib_page.visit()
         lib_page.wait_until_ready()
 
-        # This element is the only one with an error on the page.
-        # For now, we don't raise an error for it. Error id: 'link-text'
-        lib_page.a11y_audit.config.set_scope(exclude=[('#content > '
-            '.wrapper-mast.wrapper > .mast.has-actions.has-navigation.has-'
-            'subtitle > .nav-actions > ul > .action-item.action-toggle-'
-            'preview.nav-item > .button.button-toggle-preview.action-button.'
-            'toggle-preview-button.is-hidden')])
+        # There are several existing color contrast errors on this page,
+        # we will ignore this error in the test until we fix them.
+        lib_page.a11y_audit.config.set_rules(
+            ['color-contrast'], ignore=True)
 
-        errors = lib_page.a11y_audit.do_audit()
-
-        if errors:
-            lib_page.a11y_audit.report_errors(errors, "LibraryEditPage")
+        lib_page.a11y_audit.check_for_accessibility_errors()
