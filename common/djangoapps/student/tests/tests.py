@@ -537,6 +537,40 @@ class DashboardTest(ModuleStoreTestCase):
         self.assertNotContains(response, "How it Works")
         self.assertNotContains(response, "Schools & Partners")
 
+    def test_course_mode_info_with_different_enrollments(self, enrollment_mode):
+        """It will be true only if enrollment mode is honor and course has verified mode."""
+
+        CourseModeFactory.create(
+            course_id=self.course.id,
+            mode_slug='verified',
+            mode_display_name='Verified',
+            expiration_datetime=datetime.now(pytz.UTC) + timedelta(days=1)
+        )
+
+        enrollment = CourseEnrollment.enroll(self.user, self.course.id, mode=enrollment_mode)
+        course_mode_info = complete_course_mode_info(self.course.id, enrollment)
+
+        self.assertTrue(course_mode_info['show_upsell'])
+        self.assertEquals(course_mode_info['days_for_upsell'], 1)
+
+    @ddt.data('verified', 'credit')
+    def test_course_mode_info_with_different_enrollments(self, enrollment_mode):
+        """If user enrollment mode is either verified or credit then show_upsell
+        will be always false.
+        """
+        CourseModeFactory.create(
+            course_id=self.course.id,
+            mode_slug='verified',
+            mode_display_name='Verified',
+            expiration_datetime=datetime.now(pytz.UTC) + timedelta(days=1)
+        )
+
+        enrollment = CourseEnrollment.enroll(self.user, self.course.id, mode=enrollment_mode)
+        course_mode_info = complete_course_mode_info(self.course.id, enrollment)
+
+        self.assertFalse(course_mode_info['show_upsell'])
+        self.assertIsNone(course_mode_info['days_for_upsell'])
+
 
 class UserSettingsEventTestMixin(EventTestMixin):
     """
