@@ -15,8 +15,11 @@ from .utils import get_course_versions
 class Command(BaseCommand):
     """Force publish a course"""
     help = '''
-    Force publish a course. Takes one arguments:
+    Force publish a course. Takes two arguments:
     <course_id>: the course id of the course you want to publish forcefully
+    commit: do the force publish
+
+    If you do not specify 'commit', the command will print out what changes would be made.
     '''
 
     def handle(self, *args, **options):
