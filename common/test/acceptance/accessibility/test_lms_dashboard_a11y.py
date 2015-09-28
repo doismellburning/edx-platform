@@ -21,7 +21,8 @@ class LmsDashboardAxsTest(BaseLmsDashboardTest):
 
         # There are several existing color contrast errors on this page,
         # we will ignore this error in the test until we fix them.
-        self.dashboard_page.a11y_audit.config.set_rules(
-            ['color-contrast'], ignore=True)
+        self.dashboard_page.a11y_audit.config.set_rules({
+            "ignore": ['color-contrast'],
+        })
 
         self.dashboard_page.a11y_audit.check_for_accessibility_errors()

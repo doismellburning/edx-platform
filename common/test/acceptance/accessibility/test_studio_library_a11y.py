@@ -23,7 +23,8 @@ class StudioLibraryAxsTest(StudioLibraryTest):
 
         # There are several existing color contrast errors on this page,
         # we will ignore this error in the test until we fix them.
-        lib_page.a11y_audit.config.set_rules(
-            ['color-contrast'], ignore=True)
+        lib_page.a11y_audit.config.set_rules({
+            "ignore": ['color-contrast'],
+        })
 
         lib_page.a11y_audit.check_for_accessibility_errors()
