@@ -718,6 +718,30 @@ def get_thread(request, thread_id):
     return serializer.data
 
 
+def get_response_comments(request, comment_id, page, page_size):
+    try:
+        cc_comment = Comment(id=comment_id).retrieve()
+        cc_thread, context = _get_thread_and_context(request, cc_comment["thread_id"])
+        if cc_thread["thread_type"] == "question":
+            thread_responses = cc_thread["endorsed_responses"] + cc_thread["non_endorsed_responses"]
+        else:
+            thread_responses = cc_thread["children"]
+        for response in thread_responses:
+            if response["id"] == comment_id:
+                response_comments = response["children"]
+                break
+
+        response_skip = page_size * (page - 1)
+        paged_response_comments = response_comments[response_skip:(response_skip + page_size)]
+        results = [CommentSerializer(comment, context=context).data for comment in paged_response_comments]
+
+        comments_count = len(response_comments)
+        num_pages = (comments_count + page_size - 1) / page_size if comments_count else 1
+        return get_paginated_data(request, results, page, num_pages)
+    except CommentClientRequestError:
+        raise Http404
+
+
 def delete_thread(request, thread_id):
     """
     Delete a thread.
